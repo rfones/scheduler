@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/ai-scheduler.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}

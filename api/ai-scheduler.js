@@ -1,40 +1,7 @@
-import { SchedulerItem } from '../src/stores/schedule'
-
 const MAX_DAYS_PER_REQUEST = 30
 
 // OpenAI API types
-interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
-
-interface ScheduleResponse {
-  add: ScheduleItem[]
-  update: ScheduleItem[]
-  delete: Omit<ScheduleItem, 'startTime' | 'endTime'>[]
-}
-
-interface ScheduleItem {
-  startTime: string
-  endTime: string
-}
-
-interface RequestBody {
-  message: string
-  currentSchedule: { id: string; startTime: string; endTime: string }[]
-  timezone: string
-}
-
-interface ApiRequest {
-  method: string
-  body: RequestBody
-}
-
-interface ApiResponse {
-  status: (code: number) => { json: (data: ScheduleResponse | { error: string }) => void }
-}
-
-const chatCompletion = async (systemPrompt: string, messages: ChatMessage[]) => {
+const chatCompletion = async (systemPrompt, messages) => {
   const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -56,10 +23,7 @@ const chatCompletion = async (systemPrompt: string, messages: ChatMessage[]) => 
   return reply
 }
 
-const getAffectedDays = async (
-  message: string,
-  timezone: string,
-): Promise<{ dates: string[]; isUpdate: boolean }> => {
+const getAffectedDays = async (message, timezone) => {
   const systemPrompt = `
   You are a scheduling assistant. The user will provide a message with changes to their weekly availability in natural language enclosed in #### (e.g., "Add M-F 9 AM - 5 PM with a break from 1 PM to 2 PM" or "Remove Wednesdays").
 
@@ -71,7 +35,7 @@ const getAffectedDays = async (
   - The user's IANA timezone is ${timezone}.
   - Double-check that the days of the week requested are correct.
   - Return a JSON object with a dates array of strings with the date in the format YYYY-MM-DD.
-  - Dtermine if the use is asking for an update. If so return an isUpdate flag with the value true.
+  - Determine if the user is asking for an update. If so return an isUpdate flag with the value true.
 
   Example:
   Message: "Add M-F 9 AM - 5 PM with a break from 1 PM to 2 PM"
@@ -79,10 +43,9 @@ const getAffectedDays = async (
 
   Message: "Remove Wednesdays"
   Return: {dates: ["2025-08-06", "2025-08-13", "2025-08-20", "2025-08-27", "2025-09-03", ...], isUpdate: true}
-
   `
 
-  const messages: ChatMessage[] = [
+  const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: `####${message}####` },
   ]
@@ -90,12 +53,7 @@ const getAffectedDays = async (
   return JSON.parse(reply)
 }
 
-const generateNewSchedule = async (
-  message: string,
-  timezone: string,
-  day: string,
-  schedule: { id: string; startTime: string; endTime: string }[],
-): Promise<ScheduleResponse> => {
+const generateNewSchedule = async (message, timezone, day, schedule) => {
   const systemPrompt = `
   You are a scheduling assistant. The user will provide a message with changes to their weekly availability in natural language enclosed in #### (e.g., "Add M-F 9 AM - 5 PM with a break from 1 PM to 2 PM" or "Remove Wednesdays").
 
@@ -106,7 +64,7 @@ const generateNewSchedule = async (
   - The current schedule is ${JSON.stringify(schedule, null, 2)}.
   - Return a JSON array of objects with the add/update/delete schedule.
   - If no changes are needed, return an empty array for each type.
-  - If the user asks for a change look to see what scedules in intersects with. Update the schedule to match the new schedule. Add new items if needed. Delete items if needed.
+  - If the user asks for a change look to see what schedules in intersects with. Update the schedule to match the new schedule. Add new items if needed. Delete items if needed.
 
   Format should be:
   {
@@ -134,7 +92,7 @@ const generateNewSchedule = async (
   }
   `
 
-  const messages: ChatMessage[] = [
+  const messages = [
     { role: 'system', content: systemPrompt },
     { role: 'user', content: `####${message}####` },
   ]
@@ -142,7 +100,7 @@ const generateNewSchedule = async (
   return JSON.parse(reply)
 }
 
-export default async function handler(req: ApiRequest, res: ApiResponse) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
       error: 'Method not allowed',
@@ -160,7 +118,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const { dates, isUpdate } = await getAffectedDays(message, timezone)
   console.log('affectedDays', dates)
 
-  const response: ScheduleResponse = {
+  const response = {
     add: [],
     update: [],
     delete: [],
