@@ -10,6 +10,7 @@ import * as directives from 'vuetify/directives'
 import App from './App.vue'
 import router from './router'
 import './index.css'
+import '@mdi/font/css/materialdesignicons.css'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
 const app = createApp(App)

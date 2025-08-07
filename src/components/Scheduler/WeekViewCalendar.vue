@@ -4,29 +4,28 @@ import CalendarHeader from './CalendarHeader.vue';
 import DayColumn from './DayColumn.vue';
 import TimeColumn from './TimeColumn.vue';
 
-const aiAgent = ref('');
+const props = defineProps<{
+  date: Date;
+}>();
 
-const now = new Date();
-console.log('now', now);
+const now = computed(() => {
+  return new Date(props.date);
+});
 
 const startofWeek = computed(() => {
-  const dayOfWeek = now.getDay();
-  const diff = now.getDate() - dayOfWeek;
-  const startofWeek = new Date(now.setDate(diff));
+  const dayOfWeek = now.value.getDay();
+  const diff = now.value.getDate() - dayOfWeek;
+  const startofWeek = new Date(now.value.setDate(diff));
   return startofWeek;
 });
 
-const date = (day: number) => {
-  const date = new Date(startofWeek.value);
-  date.setDate(date.getDate() + day - 1);
-  return date;
+const getColumnDate = (day: number) => {
+  const columnDate = new Date(startofWeek.value);
+  columnDate.setDate(columnDate.getDate() + day - 1);
+  return columnDate;
 };
 
 const calendarBody = ref<HTMLDivElement | null>(null);
-
-const timezone = computed(() => {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
-});
 
 onMounted(() => {
   // scroll body down to middle
@@ -38,18 +37,12 @@ onMounted(() => {
   }
 });
 
-const generateAvailability = () => {
-  console.log('generateAvailability', aiAgent.value);
-};
-
 </script>
 
 <template>
-  <h2>Calendar</h2>
-  {{ timezone || 'no timezone' }}
   <div class="calendar-week-view">
     <div class="calendar-week-view-header">
-      <CalendarHeader v-for="i in 7" :key="i" :date="date(i)" />
+      <CalendarHeader v-for="i in 7" :key="i" :date="getColumnDate(i)" />
     </div>
     <div class="calendar-week-view-body" ref="calendarBody">
       <TimeColumn class="calendar-week-view-time" />
@@ -63,7 +56,7 @@ const generateAvailability = () => {
 <style scoped>
 .calendar-week-view {
   display: grid;
-  grid-template-columns: 1fr repeat(7, 2fr);
+  grid-template-columns: 80px repeat(7, 2fr);
   grid-template-areas: '. header header header header header header header'
     'body body body body body body body body';
 }
@@ -83,7 +76,7 @@ const generateAvailability = () => {
 .calendar-week-view-body {
   grid-area: body;
   display: grid;
-  grid-template-columns: 1fr repeat(7, 2fr);
+  grid-template-columns: 80px repeat(7, 2fr);
   grid-template-areas: 'time day day day day day day day';
   height: 768px;
   overflow-y: scroll;

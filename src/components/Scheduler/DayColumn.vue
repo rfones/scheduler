@@ -1,27 +1,29 @@
 <script setup lang="ts">
-import { useScheduleStore, type Availability } from '@/stores/schedule';
+import { useScheduleStore, type SchedulerItem } from '@/stores/schedule';
 import { computed, ref } from 'vue';
 
 const ROW_HEIGHT = 25
 const scheduleStore = useScheduleStore();
-
-// get all events for the day
-const schedule = computed(() => {
-  console.log(scheduleStore.availability);
-  return scheduleStore.availability.filter((availability) => {
-    return availability.startTime.getDate() === date.value.getDate() && availability.startTime.getMonth() === date.value.getMonth() && availability.startTime.getFullYear() === date.value.getFullYear();
-  });
-});
 
 const props = defineProps<{
   date: Date;
   day: number;
 }>();
 
-const date = computed(() => {
+const columnDate = computed(() => {
   const date = new Date(props.date);
   date.setDate(date.getDate() + props.day - 1);
+  date.setHours(0, 0, 0, 0);
+  console.log('date', date.toISOString());
   return date;
+});
+
+// get all events for the day
+const schedule = computed(() => {
+  console.log(scheduleStore.availability);
+  return scheduleStore.availability.filter((availability) => {
+    return availability.startTime.getDate() === columnDate.value.getDate() && availability.startTime.getMonth() === columnDate.value.getMonth() && availability.startTime.getFullYear() === columnDate.value.getFullYear();
+  });
 });
 
 function convertTimeToGridRow(time: Date) {
@@ -30,10 +32,10 @@ function convertTimeToGridRow(time: Date) {
   return hour * 2 + 1 + (minute / 30)
 }
 
-const calculateGridPosition = (availability: Availability) => {
+const calculateGridPosition = (availability: SchedulerItem) => {
   const gridRowStart = convertTimeToGridRow(availability.startTime);
   const gridRowEnd = convertTimeToGridRow(availability.endTime);
-  console.log({ gridRowStart, gridRowEnd, availability, date: date.value });
+  console.log({ gridRowStart, gridRowEnd, availability, date: columnDate.value });
   return {
     gridRowStart,
     gridRowEnd
@@ -76,10 +78,10 @@ function handleGridMouseUp(event: MouseEvent) {
     }
 
     scheduleStore.addAvailability({
-      startTime: new Date(`${date.value.toISOString().split('T')[0]}T${convertGridRowToTime(startHour.value)}`),
-      endTime: new Date(`${date.value.toISOString().split('T')[0]}T${convertGridRowToTime(endHour.value)}`)
+      startTime: new Date(`${columnDate.value.toISOString().split('T')[0]}T${convertGridRowToTime(startHour.value)}`),
+      endTime: new Date(`${columnDate.value.toISOString().split('T')[0]}T${convertGridRowToTime(endHour.value)}`)
     })
-    console.log("date:", date.value.toISOString().split('T')[0], "start:", convertGridRowToTime(startHour.value), "end:", convertGridRowToTime(endHour.value))
+    console.log("date:", columnDate.value.toISOString().split('T')[0], "start:", convertGridRowToTime(startHour.value), "end:", convertGridRowToTime(endHour.value))
   }
   startHour.value = null
   endHour.value = null
@@ -112,18 +114,23 @@ function convertGridRowToTime(gridRow: number) {
 <template>
   <div class="day-column" ref="grid" @mousedown="handleGridMouseDown" @mouseup="handleGridMouseUp"
     @mousemove="handleGridMouseMove">
+
     <div v-for="availability in schedule" :key="availability.id" class="time-slot-scheduled"
       :style="calculateGridPosition(availability)">
       <span class="time-slot-scheduled-text"
         v-html="formatTimeRange(availability.startTime, availability.endTime)"></span>
-      <v-btn icon="mdi-delete" @click="scheduleStore.deleteAvailability(availability.id)" size="small" variant="text"
-        color="red"></v-btn>
+      <v-btn-group variant="outlined" divided class="time-slot-scheduled-btn-group" density="compact">
+        <v-btn @click="scheduleStore.deleteAvailability(availability.id)" icon="mdi-delete" size="small"></v-btn>
+        <v-btn @click="$router.push(`/scheduler/${availability.id}`)" icon="mdi-pencil" size="small"></v-btn>
+      </v-btn-group>
     </div>
+
     <div v-if="startHour && endHour" class="time-slot-scheduled"
       :style="{ gridRowStart: startHour, gridRowEnd: endHour }">
-      <span class="time-slot-scheduled-text" v-html="formatTimeRange(new Date(`${date.toISOString().split('T')[0]}T${convertGridRowToTime(startHour)}`), new
-        Date(`${date.toISOString().split('T')[0]}T${convertGridRowToTime(endHour)}`))"></span>
+      <span class="time-slot-scheduled-text" v-html="formatTimeRange(new Date(`${columnDate.toISOString().split('T')[0]}T${convertGridRowToTime(startHour)}`), new
+        Date(`${columnDate.toISOString().split('T')[0]}T${convertGridRowToTime(endHour)}`))"></span>
     </div>
+
   </div>
 </template>
 
@@ -144,6 +151,7 @@ function convertGridRowToTime(gridRow: number) {
   margin: 1px;
   font-size: .75rem;
 }
+
 
 .time-slot-scheduled-text {
   user-select: none;

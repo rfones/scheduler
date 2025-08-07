@@ -9,11 +9,15 @@ const router = createRouter({
     },
     {
       path: '/scheduler',
-      component: () => import('../components/Scheduler/index.vue'),
+      component: () => import('../components/Scheduler/SchedulerView.vue'),
     },
     {
       path: '/scheduler/add',
       component: () => import('../components/Scheduler/AddAvailability.vue'),
+    },
+    {
+      path: '/scheduler/:id',
+      component: () => import('../components/Scheduler/EditAvailability.vue'),
     },
   ],
 })
